@@ -7,7 +7,7 @@ import avatar from "../../assets/avatar.png";
 import { AuthContext } from "../../contexts/auth";
 
 import { doc, updateDoc } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 import "./profile.css";
 import { db, storage } from "../../services/firebase";
@@ -38,35 +38,31 @@ export default function Profile() {
   }
 
   async function handleUpload() {
-    const currentUid = user.uid
+    const currentUid = user.uid;
 
-    const uploadRef = ref(storage, `images/${currentUid}/${imageAvatar.name}`)
+    const uploadRef = ref(storage, `images/${currentUid}/${imageAvatar.name}`);
 
-    const uploadTask = uploadBytes(uploadRef, imageAvatar)
-    .then((snapshot) => {
-      
-      getDownloadURL(snapshot.ref).then( async (downloadURL) => {
+    const uploadTask = uploadBytes(uploadRef, imageAvatar).then((snapshot) => {
+      getDownloadURL(snapshot.ref).then(async (downloadURL) => {
         let urlFoto = downloadURL;
 
-        const docRef = doc(db, "users", user.uid)
+        const docRef = doc(db, "users", user.uid);
         await updateDoc(docRef, {
           avatarUrl: urlFoto,
           nome: nome,
-        })
-        .then(() => {
+        }).then(() => {
           let data = {
             ...user,
             nome: nome,
             avatarUrl: urlFoto,
           };
-  
+
           setUser(data);
           storageUser(data);
-          toast.success("Atualizado com sucesso")
-        })
-      })
-
-    })
+          toast.success("Atualizado com sucesso");
+        });
+      });
+    });
   }
 
   async function handleSubmit(e) {
@@ -84,10 +80,10 @@ export default function Profile() {
 
         setUser(data);
         storageUser(data);
-        toast.success("Atualizado com sucesso")
+        toast.success("Atualizado com sucesso");
       });
-    } else if( nome !== '' && imageAvatar !== null) {
-      handleUpload()
+    } else if (nome !== "" && imageAvatar !== null) {
+      handleUpload();
     }
   }
 
