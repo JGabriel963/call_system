@@ -4,13 +4,16 @@ import { FiPlusCircle } from "react-icons/fi";
 import "./new.css";
 import { AuthContext } from "../../contexts/auth";
 import { db } from "../../services/firebase";
-import { collection, getDocs, getDoc, doc } from 'firebase/firestore'
+import { collection, getDocs, getDoc, doc, addDoc } from 'firebase/firestore'
 import { useContext, useEffect, useState } from "react";
+import { toast } from "react-toastify";
 
 const listRef = collection(db, "customers")
 
 export default function New() {
-    const { user } = useContext(AuthContext)
+
+
+  const { user } = useContext(AuthContext)
   const [customers, setCustomers] = useState([]);
   const [customerSelected, setCustomerSelected] = useState(0)
   const [loadCustomers, setLoadCustomers] = useState(true)
@@ -63,6 +66,30 @@ export default function New() {
     setCustomerSelected(e.target.value)
   }
 
+  async function handleSubmit(e) {
+    e.preventDefault()
+
+
+    await addDoc(collection(db, "chamados"), {
+      created: new Date(),
+      cliente: customers[customerSelected].nomeFantasia,
+      clienteId: customers[customerSelected].id,
+      assunto: assunto,
+      complemento: complement,
+      status: status,
+      userId: user.uid,
+    })
+    .then(()=> {
+      toast.success("Chamada Registrada")
+      setComplement("")
+      setCustomerSelected(0)
+    })
+    .catch((error) => {
+      toast.error("Ops, erro ao Registrar")
+      console.log(error)
+    })
+  }
+
   return (
     <div>
       <Header />
@@ -73,7 +100,7 @@ export default function New() {
         </Title>
 
         <div className="container">
-          <form className="form-profile">
+          <form className="form-profile" onSubmit={handleSubmit}>
             <label>Clientes</label>
             {
                 loadCustomers ? (
