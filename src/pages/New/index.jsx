@@ -4,8 +4,9 @@ import { FiPlusCircle } from "react-icons/fi";
 import "./new.css";
 import { AuthContext } from "../../contexts/auth";
 import { db } from "../../services/firebase";
-import { collection, getDocs, getDoc, doc, addDoc } from 'firebase/firestore'
+import { collection, getDocs, getDoc, addDoc, doc, updateDoc } from 'firebase/firestore'
 import { useContext, useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
 const listRef = collection(db, "customers")
@@ -14,12 +15,15 @@ export default function New() {
 
 
   const { user } = useContext(AuthContext)
+  const { id } = useParams()
+  const navigate = useNavigate()
   const [customers, setCustomers] = useState([]);
   const [customerSelected, setCustomerSelected] = useState(0)
   const [loadCustomers, setLoadCustomers] = useState(true)
   const [complement, setComplement] = useState("");
   const [assunto, setAssunto] = useState("Assunto");
   const [status, setStatus] = useState("Aberto");
+  const [idCustomer, setIdCustomer] = useState(false)
 
     useEffect(() => {
         async function loadCustomers() {
@@ -42,6 +46,10 @@ export default function New() {
 
                 setCustomers(lista)
                 setLoadCustomers(false)
+
+                if (id) {
+                  loadId(lista)
+                }
             })
             .catch((error) => {
                 console.log("ERRO AO BUSCAR OS CLIENTES", error)
@@ -51,7 +59,26 @@ export default function New() {
         }
 
         loadCustomers()
-    }, [])
+    }, [id])
+
+    async function loadId(list) {
+      const docRef = doc(db, "chamados", id)
+      await getDoc(docRef)
+      .then((snapshot) => {
+        setAssunto(snapshot.data().assunto)
+        setStatus(snapshot.data().status)
+        setComplement(snapshot.data().complemento)
+
+
+        let index = list.findIndex(item => item.id === snapshot.data().clienteId)
+        setCustomerSelected(index)
+        setIdCustomer(true)
+      })
+      .catch((error) => {
+        console.log(error)
+        setIdCustomer(false)
+      })
+    }
 
 
   function handleOptionChange(e) {
@@ -67,7 +94,30 @@ export default function New() {
   }
 
   async function handleSubmit(e) {
-    e.preventDefault()
+    e.preventDefault();
+
+    if (idCustomer) {
+      await updateDoc(doc(db, "chamados", id), {
+        cliente: customers[customerSelected].nomeFantasia,
+        clienteId: customers[customerSelected].id,
+        assunto: assunto,
+        complemento: complement,
+        status: status,
+        userId: user.uid,
+      })
+      .then(() => {
+        toast.info("Atualizado com sucesso!")
+        setCustomerSelected(0)
+        setComplement(0)
+        navigate("/dashboard")
+      })
+      .catch((error) => {
+        console.log(error)
+        toast.error("Ops, erro ao atualizar")
+      })
+
+      return
+    }
 
 
     await addDoc(collection(db, "chamados"), {
@@ -95,7 +145,7 @@ export default function New() {
       <Header />
 
       <div className="content">
-        <Title name="Novo Chamado">
+        <Title name={ id ? "Editando Chamado" : "Novo Chamado"}>
           <FiPlusCircle size={25} />
         </Title>
 

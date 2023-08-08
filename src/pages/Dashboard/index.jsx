@@ -4,76 +4,96 @@ import "./dashboard.css";
 import Title from "../../components/Title";
 import { FiPlus, FiMessageSquare, FiSearch, FiEdit2 } from "react-icons/fi";
 import { Link } from "react-router-dom";
-import { getDocs, collection, orderBy, limit, startAfter, query } from 'firebase/firestore'
+import {
+  getDocs,
+  collection,
+  orderBy,
+  limit,
+  startAfter,
+  query,
+} from "firebase/firestore";
 import { db } from "../../services/firebase";
-import { format } from 'date-fns'
+import { format } from "date-fns";
 
-const listRef = collection(db, "chamados")
+const listRef = collection(db, "chamados");
 
 export default function Dashboard() {
   const [chamados, setChamados] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isEmpty, setEmpty] = useState(false)
+  const [isEmpty, setEmpty] = useState(false);
+  const [lastDocs, setLastDocs] = useState();
+  const [loadingMore, setLoadingMore] = useState(false);
 
-    useEffect(() => {
-        async function loadChamadas() {
-            const q = query(listRef, orderBy('created', "desc"), limit(5))
+  useEffect(() => {
+    async function loadChamadas() {
+      const q = query(listRef, orderBy("created", "desc"), limit(5));
 
-            const querySnapshot = await getDocs(q)
-            setChamados([]);
-            await updateState(querySnapshot)
+      const querySnapshot = await getDocs(q);
+      setChamados([]);
+      await updateState(querySnapshot);
 
-            setLoading(false)
-        }
-
-        loadChamadas();
-
-        return () => {}
-    }, [])
-
-    async function updateState(querySnapshot) {
-        const isCollectionEmpty = querySnapshot.size === 0;
-
-        if (!isCollectionEmpty) {
-            let list = [];
-
-            querySnapshot.forEach((doc) => {
-                list.push({
-                    id: doc.id,
-                    assunto: doc.data().assunto,
-                    cliente: doc.data().cliente,
-                    clienteId: doc.data().clienteId,
-                    created: doc.data().created,
-                    createdFormat: format(doc.data().created.toDate(), 'dd/MM/yyyy'),
-                    status: doc.data().status,
-                    complemento: doc.data().complemento
-                })
-            })
-
-            setChamados(chamados => [...chamados, ...list])
-        } else {
-            setEmpty(true)
-        }
+      setLoading(false);
     }
 
-    if(loading) {
-        return (
-            <div>
-                <Header />
+    loadChamadas();
 
-                <div className="content">
-                    <Title name="Tickets">
-                        <FiMessageSquare size={25} />
-                    </Title>
+    return () => {};
+  }, []);
 
-                    <div className="container dashboard">
-                        <span>Buscando Chamados...</span>
-                    </div>
-                </div>
-            </div>
-        )
+  async function updateState(querySnapshot) {
+    const isCollectionEmpty = querySnapshot.size === 0;
+
+    if (!isCollectionEmpty) {
+      let list = [];
+
+      querySnapshot.forEach((doc) => {
+        list.push({
+          id: doc.id,
+          assunto: doc.data().assunto,
+          cliente: doc.data().cliente,
+          clienteId: doc.data().clienteId,
+          created: doc.data().created,
+          createdFormat: format(doc.data().created.toDate(), "dd/MM/yyyy"),
+          status: doc.data().status,
+          complemento: doc.data().complemento,
+        });
+      });
+
+      const lastDoc = querySnapshot.docs[querySnapshot.docs.length - 1];
+      setChamados((chamados) => [...chamados, ...list]);
+      setLastDocs(lastDoc);
+    } else {
+      setEmpty(true);
     }
 
+    setLoadingMore(false);
+  }
+
+  async function handleMore() {
+      setLoadingMore(true)
+
+      const q = query(listRef, orderBy("created", "desc"), startAfter(lastDocs), limit(5))
+      const querySnapshot = await getDocs(q)
+      await updateState(querySnapshot)
+  }
+
+  if (loading) {
+    return (
+      <div>
+        <Header />
+
+        <div className="content">
+          <Title name="Tickets">
+            <FiMessageSquare size={25} />
+          </Title>
+
+          <div className="container dashboard">
+            <span>Buscando Chamados...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -112,37 +132,42 @@ export default function Dashboard() {
                 <tbody>
                   {chamados.map((item, index) => {
                     return (
-                        <tr key={index}>
-                    <td data-label="Cliente">{item.cliente}</td>
-                    <td data-label="Assunto">{item.assunto}</td>
-                    <td data-label="Status">
-                      <span
-                        className="badge"
-                        style={{ backgroundColor: "#999" }}
-                      >
-                        {item.status}
-                      </span>
-                    </td>
-                    <td data-label="Cadastrado">{item.createdFormat}</td>
-                    <td data-label="#">
-                      <button
-                        className="action"
-                        style={{ backgroundColor: "#3583f6" }}
-                      >
-                        <FiSearch color="#fff" size={17} />
-                      </button>
-                      <button
-                        className="action"
-                        style={{ backgroundColor: "#f6a935" }}
-                      >
-                        <FiEdit2 color="#fff" size={17} />
-                      </button>
-                    </td>
-                  </tr>
-                    )
+                      <tr key={index}>
+                        <td data-label="Cliente">{item.cliente}</td>
+                        <td data-label="Assunto">{item.assunto}</td>
+                        <td data-label="Status">
+                          <span
+                            className="badge"
+                            style={{ backgroundColor: item.status === "Aberto" ? "#5cb85c" : "#999"}}
+                          >
+                            {item.status}
+                          </span>
+                        </td>
+                        <td data-label="Cadastrado">{item.createdFormat}</td>
+                        <td data-label="#">
+                          <button
+                            className="action"
+                            style={{ backgroundColor: "#3583f6" }}
+                          >
+                            <FiSearch color="#fff" size={17} />
+                          </button>
+                          <Link to={`/new/${item.id}`}
+                            className="action"
+                            style={{ backgroundColor: "#f6a935" }}
+                          >
+                            <FiEdit2 color="#fff" size={17} />
+                          </Link>
+                        </td>
+                      </tr>
+                    );
                   })}
                 </tbody>
               </table>
+
+              {loadingMore && <h3>Buscando mais chamados...</h3>}
+              {!loadingMore && !isEmpty && (
+                <button className="btn-more" onClick={handleMore}>Buscar mais</button>
+              )}
             </>
           )}
         </>
