@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Header from "../../components/Header";
 import "./dashboard.css";
+import Modal from "../../components/Modal";
 import Title from "../../components/Title";
 import { FiPlus, FiMessageSquare, FiSearch, FiEdit2 } from "react-icons/fi";
 import { Link } from "react-router-dom";
@@ -23,6 +24,8 @@ export default function Dashboard() {
   const [isEmpty, setEmpty] = useState(false);
   const [lastDocs, setLastDocs] = useState();
   const [loadingMore, setLoadingMore] = useState(false);
+  const [showPostModal, setShowPostModal] = useState(false);
+  const [datail, setDetail] = useState({});
 
   useEffect(() => {
     async function loadChamadas() {
@@ -70,11 +73,21 @@ export default function Dashboard() {
   }
 
   async function handleMore() {
-      setLoadingMore(true)
+    setLoadingMore(true);
 
-      const q = query(listRef, orderBy("created", "desc"), startAfter(lastDocs), limit(5))
-      const querySnapshot = await getDocs(q)
-      await updateState(querySnapshot)
+    const q = query(
+      listRef,
+      orderBy("created", "desc"),
+      startAfter(lastDocs),
+      limit(5)
+    );
+    const querySnapshot = await getDocs(q);
+    await updateState(querySnapshot);
+  }
+
+  function toggleModal(item) {
+    setShowPostModal(!showPostModal)
+    setDetail(item)
   }
 
   if (loading) {
@@ -138,7 +151,10 @@ export default function Dashboard() {
                         <td data-label="Status">
                           <span
                             className="badge"
-                            style={{ backgroundColor: item.status === "Aberto" ? "#5cb85c" : "#999"}}
+                            style={{
+                              backgroundColor:
+                                item.status === "Aberto" ? "#5cb85c" : "#999",
+                            }}
                           >
                             {item.status}
                           </span>
@@ -148,10 +164,12 @@ export default function Dashboard() {
                           <button
                             className="action"
                             style={{ backgroundColor: "#3583f6" }}
+                            onClick={() => toggleModal(item)}
                           >
                             <FiSearch color="#fff" size={17} />
                           </button>
-                          <Link to={`/new/${item.id}`}
+                          <Link
+                            to={`/new/${item.id}`}
                             className="action"
                             style={{ backgroundColor: "#f6a935" }}
                           >
@@ -166,12 +184,21 @@ export default function Dashboard() {
 
               {loadingMore && <h3>Buscando mais chamados...</h3>}
               {!loadingMore && !isEmpty && (
-                <button className="btn-more" onClick={handleMore}>Buscar mais</button>
+                <button className="btn-more" onClick={handleMore}>
+                  Buscar mais
+                </button>
               )}
             </>
           )}
         </>
       </div>
+
+      {showPostModal && (
+        <Modal 
+          conteudo={datail}
+          close={() => setShowPostModal(!showPostModal)}
+        />
+      )}
     </div>
   );
 }
